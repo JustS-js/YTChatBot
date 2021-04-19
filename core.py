@@ -1,9 +1,11 @@
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 import google_auth_oauthlib.flow
 from streamer import Streamer
 import json
 import pickle
 import os
+import pytchat
 with open('client_secret.json', 'r') as f:
     file = json.load(f)
     CLIENT_ID = file["installed"]["client_id"]
@@ -38,6 +40,55 @@ class YTBot:
                 pickle.dump(creds, f)
 
         return build('youtube', 'v3', credentials=creds, developerKey=API_KEY)
+
+    # !!!DO NOT USE
+    # Квота сгорит к чертям за несколько секунд, 10.000 units per day
+    # Quick quota exceed!!!
+    # def listen(self):
+    #     """Эта функция постоянно возвращает сообщения из всех активных чатов"""
+    #     page_tokens = dict()
+    #     for streamer in self.streamers:
+    #         page_tokens[streamer.liveChatId] = None
+    #
+    #     while True:
+    #         for liveChatId, nextPageToken in page_tokens.items():
+    #             response = self.listMessages(liveChatId=liveChatId, nextPageToken=nextPageToken)
+    #
+    #             page_tokens[liveChatId] = response["nextPageToken"]
+    #             if response["items"]:
+    #                 yield response["items"]
+
+    def listen(self):
+        chats = dict()
+        broadcast_to_chat = dict()
+        for streamer in self.streamers:
+            chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+            broadcast_to_chat[streamer.liveBroadcastId] = streamer.liveChatId
+        while True:
+            for liveBroadcastId, chat in chats.items():
+                if chat.is_alive():
+                    for c in chat.get().sync_items():
+                        yield c, broadcast_to_chat[liveBroadcastId]
+
+    def listMessages(self, liveChatId: str, nextPageToken=None):
+        """:liveChatId: - id чата, куда бот отправит сообщение,
+           :nextPageToken: - этот токен позволяет отсечь уже проверенные сообщения"""
+        try:
+            if nextPageToken is None:
+                request = self.yt.liveChatMessages().list(
+                    liveChatId=liveChatId,
+                    part='snippet'
+                )
+            else:
+                request = self.yt.liveChatMessages().list(
+                    liveChatId=liveChatId,
+                    part='snippet',
+                    pageToken=nextPageToken
+                )
+            response = request.execute()
+            return response
+        except Exception as e:
+            print(f'Error from YTBot.listMessages(): {e.__class__.__name__} {e}')
 
     def deleteMessage(self, id: str):
         """:id: - id сообщения, которое нужно удалить"""
@@ -92,7 +143,7 @@ class YTBot:
            id объекта блокировки можно получить из объекта, который возвращается при вызове
            функции YTBot.banUser() по ключам {'id': liveChatBanId}"""
         try:
-            request = youtube.liveChatBans().delete(
+            request = self.yt.liveChatBans().delete(
                 id=liveChatBanId
             )
             request.execute()  # разбан не возвращает объектов
@@ -136,16 +187,3 @@ class YTBot:
             return response
         except Exception as e:
             print(f'Error from YTBot.banUser(): {e.__class__.__name__} {e}')
-
-
-if __name__ == '__main__':
-    bot = YTBot()
-    chat_id = bot.streamers[0].liveChatId
-    print('Bot is ready to send messages!')
-    while True:
-        msg = input()
-        if msg == 'stop':
-            break
-
-        bot.sendMessage(msg, chat_id)
-        print('Bot sent your message.')

@@ -19,7 +19,7 @@ class Streamer:
 
         self.channelId = channelId
         # !!!Заменить upcoming на active
-        self.liveChatId = self._liveChatId(_type='upcoming')
+        self.liveChatId, self.liveBroadcastId = self._liveStreamId(_type='upcoming')
 
     def youtube_auth(self, channelId):
         """Полноценная авторизация пользователя и консервирование его данных"""
@@ -44,7 +44,7 @@ class Streamer:
     def __repr__(self):
         return f'https://www.youtube.com/channel/{self.channelId}'
 
-    def _liveChatId(self, _type='active'):
+    def _liveStreamId(self, _type='active'):
         request = self.yt.liveBroadcasts().list(
             part="snippet",
             broadcastStatus=_type
@@ -53,6 +53,6 @@ class Streamer:
         try:
             response = request.execute()
             print(response['items'][-1]['snippet']['title'])
-            return response['items'][-1]['snippet']['liveChatId']
+            return response['items'][-1]['snippet']['liveChatId'], response['items'][-1]['id']
         except Exception as e:
-            print(f'Error from Streamer.liveChatId(): {e.__class__.__name__} {e}')
+            print(f'Error from Streamer.liveStreamId(): {e.__class__.__name__} {e}')
