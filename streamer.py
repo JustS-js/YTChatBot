@@ -12,7 +12,7 @@ with open('client_secret.json', 'r') as f:
     CLIENT_SECRET_FILE = 'client_secret.json'
 
 
-class Streamer:
+class Streamer():
     def __init__(self, channelId):
         # Авторизируем сессию
         self.yt = self.youtube_auth(channelId)

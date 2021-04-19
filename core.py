@@ -6,6 +6,7 @@ import json
 import pickle
 import os
 import pytchat
+import schedule
 with open('client_secret.json', 'r') as f:
     file = json.load(f)
     CLIENT_ID = file["installed"]["client_id"]
@@ -20,6 +21,12 @@ class YTBot:
 
         # Список всех стримеров, которые используют бота
         self.streamers = self._loadStreamersFromPickles()
+
+        # Используется для асинхронного извлечения информации из чатов
+        self.chats, self.broadcast_to_chat = dict(), dict()
+        for streamer in self.streamers:
+            self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+            self.broadcast_to_chat[streamer.liveBroadcastId] = streamer.liveChatId
 
     def youtube_auth(self):
         """Полноценная авторизация бота и консервирование его данных"""
@@ -41,34 +48,30 @@ class YTBot:
 
         return build('youtube', 'v3', credentials=creds, developerKey=API_KEY)
 
-    # !!!DO NOT USE
-    # Квота сгорит к чертям за несколько секунд, 10.000 units per day
-    # Quick quota exceed!!!
-    # def listen(self):
-    #     """Эта функция постоянно возвращает сообщения из всех активных чатов"""
-    #     page_tokens = dict()
-    #     for streamer in self.streamers:
-    #         page_tokens[streamer.liveChatId] = None
-    #
-    #     while True:
-    #         for liveChatId, nextPageToken in page_tokens.items():
-    #             response = self.listMessages(liveChatId=liveChatId, nextPageToken=nextPageToken)
-    #
-    #             page_tokens[liveChatId] = response["nextPageToken"]
-    #             if response["items"]:
-    #                 yield response["items"]
+    def checkDB(self):
+        # DB update check
+        with open('db/db.json', encoding='UTF-8') as f:
+            streamers_ids = json.load(f)
+
+        streamers_sessions = [str(streamer) for streamer in self.streamers]
+        if len(streamers_sessions) < len(streamers_ids['streamers']):
+            for id in streamers_ids['streamers']:
+                if id not in streamers_sessions:
+                    streamer = Streamer(id)
+                    self.streamers.append(streamer)
+                    self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                    self.broadcast_to_chat[streamer.liveBroadcastId] = streamer.liveChatId
 
     def listen(self):
-        chats = dict()
-        broadcast_to_chat = dict()
-        for streamer in self.streamers:
-            chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-            broadcast_to_chat[streamer.liveBroadcastId] = streamer.liveChatId
+        schedule.every(10).seconds.do(self.checkDB)
         while True:
-            for liveBroadcastId, chat in chats.items():
+            schedule.run_pending()
+            for liveBroadcastId, chat in self.chats.items():
                 if chat.is_alive():
                     for c in chat.get().sync_items():
-                        yield c, broadcast_to_chat[liveBroadcastId]
+                        yield c, self.broadcast_to_chat[liveBroadcastId]
+                else:
+                    self.chats.pop(liveBroadcastId, None)
 
     def listMessages(self, liveChatId: str, nextPageToken=None):
         """:liveChatId: - id чата, куда бот отправит сообщение,
