@@ -20,6 +20,8 @@ class Streamer():
         self.channelId = channelId
         # !!!Заменить upcoming на active
         self.liveChatId, self.liveBroadcastId = self._liveStreamId(_type='upcoming')
+        self.settings = dict()
+        self.votes = None
 
     def youtube_auth(self, channelId):
         """Полноценная авторизация пользователя и консервирование его данных"""

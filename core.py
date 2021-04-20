@@ -23,10 +23,10 @@ class YTBot:
         self.streamers = self._loadStreamersFromPickles()
 
         # Используется для асинхронного извлечения информации из чатов
-        self.chats, self.broadcast_to_chat = dict(), dict()
+        self.chats, self.broadcast_to_streamer = dict(), dict()
         for streamer in self.streamers:
             self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-            self.broadcast_to_chat[streamer.liveBroadcastId] = streamer.liveChatId
+            self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
 
     def youtube_auth(self):
         """Полноценная авторизация бота и консервирование его данных"""
@@ -51,16 +51,26 @@ class YTBot:
     def checkDB(self):
         # DB update check
         with open('db/db.json', encoding='UTF-8') as f:
-            streamers_ids = json.load(f)
+            db_json = json.load(f)
 
-        streamers_sessions = [str(streamer) for streamer in self.streamers]
-        if len(streamers_sessions) < len(streamers_ids['streamers']):
-            for id in streamers_ids['streamers']:
+        streamers_sessions = [str(streamer).replace('https://www.youtube.com/channel/', '')
+                              for streamer in self.streamers]
+        if len(streamers_sessions) < len(db_json['streamers']):
+            for id in db_json['streamers']:
                 if id not in streamers_sessions:
                     streamer = Streamer(id)
                     self.streamers.append(streamer)
                     self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-                    self.broadcast_to_chat[streamer.liveBroadcastId] = streamer.liveChatId
+                    self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+
+    def parseCustomCmd(self, msg, streamer):
+        command, *args = msg.message.lstrip('!').split()
+        try:
+            try_cmd = f'self.{command}(streamer, msg, {args})'
+            print(try_cmd)
+            eval(try_cmd)
+        except Exception:
+            pass
 
     def listen(self):
         schedule.every(10).seconds.do(self.checkDB)
@@ -69,9 +79,11 @@ class YTBot:
             for liveBroadcastId, chat in self.chats.items():
                 if chat.is_alive():
                     for c in chat.get().sync_items():
-                        yield c, self.broadcast_to_chat[liveBroadcastId]
+                        print(liveBroadcastId)
+                        yield c, self.broadcast_to_streamer[liveBroadcastId]
                 else:
                     self.chats.pop(liveBroadcastId, None)
+                    self.broadcast_to_streamer.pop(liveBroadcastId, None)
 
     def listMessages(self, liveChatId: str, nextPageToken=None):
         """:liveChatId: - id чата, куда бот отправит сообщение,
