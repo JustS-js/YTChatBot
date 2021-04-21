@@ -7,12 +7,32 @@ USED_CMD = ['youtube_auth', 'checkDB', 'parseCustomCmd', 'listen', 'listMessages
 class JSBot(core.YTBot):
     def __init__(self):
         super().__init__()
+        self.streamers[0].settings['banwords'] = ['aboba']
+        self.streamers[1].settings['banwords'] = ['amogus']
 
     def run(self):
         self.checkDB()
         for chat_obj, streamer in self.listen():
             if chat_obj.message[0] == '!' and chat_obj.message[1:] not in USED_CMD:
                 self.parseCustomCmd(chat_obj, streamer)
+            if chat_obj.message.lower() in streamer.settings['banwords']:
+                # bantype: 0 - no ban; 1 - warning; 2 - tempban; 3 - ban
+                # bantype = sql.do.something()
+                text = 'debug'
+                bantype = 3
+                if bantype == 0:
+                    # sql.makebantype(1)
+                    text = f'@{chat_obj.author.name}, предупреждаю! Ещё одно плохое слово, и улетаешь в бан :)'
+                elif bantype == 1:
+                    # sql.makebantype(2)
+                    self.banUser(liveChatId=streamer.liveChatId, userToBanId=chat_obj.author.channelId,
+                                 temp=True)
+                    text = f'@{chat_obj.author.name}, я предупреждал! Посиди в бане 5 минут 🗿'
+                elif bantype == 2:
+                    # sql.makebantype(3)
+                    self.banUser(liveChatId=streamer.liveChatId, userToBanId=chat_obj.author.channelId)
+                    text = f'@{chat_obj.author.name}, ты говорил много плохих вещей, тебе тут больше не рады :('
+                self.sendMessage(text=text, liveChatId=streamer.liveChatId)
 
     def help(self, streamer, msg, *args):
         """Custom command"""

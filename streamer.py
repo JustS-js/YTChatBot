@@ -1,5 +1,4 @@
 from googleapiclient.discovery import build
-import google_auth_oauthlib.flow
 from google.auth.transport.requests import Request
 import json
 import pickle
@@ -30,18 +29,12 @@ class Streamer():
             with open(f'creds/{channelId}.pickle', 'rb') as f:
                 creds = pickle.load(f)
 
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                scope = ["https://www.googleapis.com/auth/youtube"]
-                flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, scope)
-                creds = flow.run_console()
-            # консервируем
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
             with open(f'creds/{channelId}.pickle', "wb") as f:
                 pickle.dump(creds, f)
 
-        return build('youtube', 'v3', credentials=creds, developerKey=API_KEY)
+        return build('youtube', 'v3', credentials=creds)
 
     def __repr__(self):
         return f'https://www.youtube.com/channel/{self.channelId}'

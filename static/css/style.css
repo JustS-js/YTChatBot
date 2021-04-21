@@ -1,0 +1,10 @@
+.container {
+    width: 80px;
+    height: 50px;
+}
+
+/* Resize images */
+.container img {
+    width: 100%;
+    height: auto;
+}

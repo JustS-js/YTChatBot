@@ -7,12 +7,13 @@ import pickle
 import os
 import pytchat
 import schedule
-with open('client_secret.json', 'r') as f:
-    file = json.load(f)
-    CLIENT_ID = file["installed"]["client_id"]
-    CLIENT_SECRET = file["installed"]["client_secret"]
-    API_KEY = file["installed"]["api_key"]
-    CLIENT_SECRET_FILE = 'client_secret.json'
+
+from data import db_session
+from data.users import User
+from data.settings import Settings
+from data.viewers import Viewer
+
+CLIENT_SECRET_FILE = 'client_secret_bot.json'
 
 
 class YTBot:
@@ -46,22 +47,20 @@ class YTBot:
             with open('creds/core/ytbot_build.pickle', 'wb') as f:
                 pickle.dump(creds, f)
 
-        return build('youtube', 'v3', credentials=creds, developerKey=API_KEY)
+        return build('youtube', 'v3', credentials=creds)
 
     def checkDB(self):
         # DB update check
         with open('db/db.json', encoding='UTF-8') as f:
             db_json = json.load(f)
 
-        streamers_sessions = [str(streamer).replace('https://www.youtube.com/channel/', '')
-                              for streamer in self.streamers]
-        if len(streamers_sessions) < len(db_json['streamers']):
-            for id in db_json['streamers']:
-                if id not in streamers_sessions:
-                    streamer = Streamer(id)
-                    self.streamers.append(streamer)
-                    self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-                    self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+        for upd in db_json['update']:
+            if upd['type'] == 'add_streamer':
+                channelId = upd['channelId']
+                streamer = Streamer(channelId)
+                self.streamers.append(streamer)
+                self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
 
     def parseCustomCmd(self, msg, streamer):
         command, *args = msg.message.lstrip('!').split()
