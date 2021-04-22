@@ -1,4 +1,5 @@
 import core
+from data.viewers import Viewer
 
 USED_CMD = ['youtube_auth', 'checkDB', 'parseCustomCmd', 'listen', 'listMessages', 'deleteMessage',
             'sendMessage', '_loadStreamersFromPickles', 'unbanUser', 'banUser', 'run']
@@ -7,32 +8,66 @@ USED_CMD = ['youtube_auth', 'checkDB', 'parseCustomCmd', 'listen', 'listMessages
 class JSBot(core.YTBot):
     def __init__(self):
         super().__init__()
-        self.streamers[0].settings['banwords'] = ['aboba']
-        self.streamers[1].settings['banwords'] = ['amogus']
 
     def run(self):
         self.checkDB()
         for chat_obj, streamer in self.listen():
+            # БД =============================================
+            viewer = self.db_sess.query(Viewer).filter(Viewer.channel_id == chat_obj.author.channelId,
+                                                       Viewer.streamer == streamer.userObj).first()
+            if viewer is None:
+                viewer = Viewer(name=chat_obj.author.name,
+                                channel_id=chat_obj.author.channelId,
+                                bantype=0,
+                                points=0,
+                                streamer_id=streamer.userObj.id)
+                self.db_sess.add(viewer)
+                self.db_sess.commit()
+            # Команды ========================================
             if chat_obj.message[0] == '!' and chat_obj.message[1:] not in USED_CMD:
                 self.parseCustomCmd(chat_obj, streamer)
-            if chat_obj.message.lower() in streamer.settings['banwords']:
-                # bantype: 0 - no ban; 1 - warning; 2 - tempban; 3 - ban
-                # bantype = sql.do.something()
-                text = 'debug'
-                bantype = 3
-                if bantype == 0:
-                    # sql.makebantype(1)
-                    text = f'@{chat_obj.author.name}, предупреждаю! Ещё одно плохое слово, и улетаешь в бан :)'
-                elif bantype == 1:
-                    # sql.makebantype(2)
-                    self.banUser(liveChatId=streamer.liveChatId, userToBanId=chat_obj.author.channelId,
-                                 temp=True)
-                    text = f'@{chat_obj.author.name}, я предупреждал! Посиди в бане 5 минут 🗿'
-                elif bantype == 2:
-                    # sql.makebantype(3)
-                    self.banUser(liveChatId=streamer.liveChatId, userToBanId=chat_obj.author.channelId)
-                    text = f'@{chat_obj.author.name}, ты говорил много плохих вещей, тебе тут больше не рады :('
-                self.sendMessage(text=text, liveChatId=streamer.liveChatId)
+            # Банворды =======================================
+            streamer.userObj.settings[0].banwords = 'aboba'
+            if set(chat_obj.message.lower().split()) & set(streamer.userObj.settings[0].banwords.split(';')):
+                # bantype: 0 - no ban; 1 - warning; 2 - tempban; 3 (0) - ban
+                print(set(chat_obj.message.lower().split()))
+                try:
+                    if viewer.bantype == 0:
+                        viewer.bantype = 1
+                        viewer.points -= 5
+                        text = f'@{chat_obj.author.name}, предупреждаю! Ещё одно плохое слово, и улетаешь в бан :)'
+                        self.sendMessage(text=text, liveChatId=streamer.liveChatId)
+                        for i in self.listMessages(liveChatId=streamer.liveChatId)['items'][::-1]:
+                            if i['snippet']['textMessageDetails']['messageText'] == chat_obj.message and \
+                                    i['authorDetails']['channelId'] == chat_obj.author.channelId:
+                                _id = i['id']
+                                break
+                        self.deleteMessage(id=_id)
+                    elif viewer.bantype == 1:
+                        viewer.bantype = 2
+                        viewer.points -= 15
+                        text = f'@{chat_obj.author.name}, я предупреждал!'
+                        self.sendMessage(text=text, liveChatId=streamer.liveChatId)
+                        self.banUser(liveChatId=streamer.liveChatId, userToBanId=chat_obj.author.channelId,
+                                     temp=True, duration=streamer.userObj.settings[0].tempban_len)
+                    elif viewer.bantype == 2:
+                        viewer.bantype = 0
+                        viewer.points -= 30
+                        text = f'@{chat_obj.author.name}, ты говорил много плохих вещей, тебе тут больше не рады :('
+                        self.sendMessage(text=text, liveChatId=streamer.liveChatId)
+                        self.banUser(liveChatId=streamer.liveChatId, userToBanId=chat_obj.author.channelId)
+                    self.db_sess.commit()
+                except Exception as e:
+                    print(e.__class__.__name__, e)
+            viewer.points += 3 if chat_obj.author.isChatSponsor else 1
+            self.db_sess.commit()
+
+    def points(self, streamer, msg, *args):
+        """Custom command"""
+        viewer = self.db_sess.query(Viewer).filter(Viewer.channel_id == msg.author.channelId,
+                                                       Viewer.streamer == streamer.userObj).first()
+        text = f'@{msg.author.name}, ваш счёт: {viewer.points} {streamer.userObj.settings[0].point_name}'
+        self.sendMessage(text=text, liveChatId=streamer.liveChatId)
 
     def help(self, streamer, msg, *args):
         """Custom command"""

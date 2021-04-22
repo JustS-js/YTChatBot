@@ -11,9 +11,13 @@ import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 import google.oauth2.credentials
 import json
+import requests
+import feedparser
+from flask_ngrok import run_with_ngrok
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'admin_secret'
+run_with_ngrok(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -55,6 +59,14 @@ def make_user(name, channel_id):
         name=name,
         channel_id=channel_id
     )
+    with open('db/db.json', 'r') as f:
+        data = json.load(f)
+    with open('db/db.json', 'w') as f:
+        data['update'].append({
+            'type': 'add_streamer',
+            'channelId': channel_id
+        })
+        json.dump(data, f)
     db_sess.add(user)
     db_sess.commit()
 
@@ -62,9 +74,10 @@ def make_user(name, channel_id):
 def make_settings(banwords, tempban_len, is_activated, streamer_id):
     db_sess = db_session.create_session()
     settings = Settings(
-        banwords='; '.join(banwords),
+        banwords=';'.join(banwords),
         tempban_len=tempban_len,
         is_activated=is_activated,
+        point_name='points',
         streamer_id=streamer_id
     )
     db_sess.add(settings)
@@ -80,9 +93,46 @@ def credentials_to_dict(credentials):
             'scopes': credentials.scopes}
 
 
+def subscribe_youtube_channel(channel_id):
+    try:
+        subscribe_url = 'https://pubsubhubbub.appspot.com/subscribe'
+        topic_url = ('https://www.youtube.com/xml/feeds/videos.xml?channel_id='
+                     + channel_id)
+        data = {
+            'hub.mode': 'subscribe',
+            'hub.callback': url_for('subscribe_callback', _external=True),
+            'hub.lease_seconds': 864000,
+            'hub.topic': topic_url
+        }
+        requests.post(subscribe_url, data=data)
+    except Exception as e:
+        print('Error in subscribe_youtube_channel():', e.__class__.__name__, e)
+
+
+@app.route('/subscribe_callback', methods=['GET', 'POST'])
+def subscribe_callback():
+    challenge = request.args.get('hub.challenge')
+
+    if challenge:
+        print('challenge:', challenge)
+        return challenge
+
+    xml = request.data
+    feed = feedparser.parse(xml)
+    for e in feed.entries:
+
+        text = (f'channel: {e.yt_channelid}\n'
+                f'video_url: {e.link}\n'
+                f'title: {e.title}')
+        print(text)
+
+    return '', 204
+
+
 @app.route('/')
 @app.route('/index')
 def index():
+    print(url_for('subscribe_callback', _external=True))
     return render_template('index.html', db_sess=db_session.create_session(), User=User, title='JustStreamBot')
 
 
@@ -135,6 +185,14 @@ def oauth2callback():
         channel_id=channel_id,
         icon=icon
     )
+    with open('db/db.json', 'r') as f:
+        data = json.load(f)
+    with open('db/db.json', 'w') as f:
+        data['update'].append({
+            'type': 'add_streamer',
+            'channelId': channel_id
+        })
+        json.dump(data, f)
     db_sess.add(user)
     db_sess.commit()
 
@@ -142,6 +200,7 @@ def oauth2callback():
         banwords='',
         tempban_len=300,
         is_activated=False,
+        point_name='points',
         streamer_id=user.id
     )
     db_sess.add(settings)

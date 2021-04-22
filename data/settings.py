@@ -12,6 +12,7 @@ class Settings(SqlAlchemyBase):
     banwords = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     tempban_len = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     is_activated = sqlalchemy.Column(sqlalchemy.Boolean)
+    point_name = sqlalchemy.Column(sqlalchemy.String, nullable=True)
 
     streamer_id = sqlalchemy.Column(sqlalchemy.Integer,
                                     sqlalchemy.ForeignKey("users.id"))

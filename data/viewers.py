@@ -11,8 +11,7 @@ class Viewer(SqlAlchemyBase):
                            primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String)
     channel_id = sqlalchemy.Column(sqlalchemy.String)
-    bantype = sqlalchemy.Column(sqlalchemy.String, nullable=True)
-    repeated_msg = sqlalchemy.Column(sqlalchemy.Integer)
+    bantype = sqlalchemy.Column(sqlalchemy.Integer, nullable=True)
     points = sqlalchemy.Column(sqlalchemy.Integer)
 
     streamer_id = sqlalchemy.Column(sqlalchemy.Integer,

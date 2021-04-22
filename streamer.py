@@ -3,23 +3,24 @@ from google.auth.transport.requests import Request
 import json
 import pickle
 import os
-with open('client_secret.json', 'r') as f:
-    file = json.load(f)
-    CLIENT_ID = file["installed"]["client_id"]
-    CLIENT_SECRET = file["installed"]["client_secret"]
-    API_KEY = file["installed"]["api_key"]
-    CLIENT_SECRET_FILE = 'client_secret.json'
+
+from data.users import User
+from data.settings import Settings
+from data.viewers import Viewer
+
+CLIENT_SECRET_FILE = 'client_secret_web.json'
 
 
 class Streamer():
-    def __init__(self, channelId):
+    def __init__(self, channelId, db_sess=None):
         # Авторизируем сессию
         self.yt = self.youtube_auth(channelId)
+        self.db_sess = db_sess
 
         self.channelId = channelId
         # !!!Заменить upcoming на active
         self.liveChatId, self.liveBroadcastId = self._liveStreamId(_type='upcoming')
-        self.settings = dict()
+        self.userObj = db_sess.query(User).filter(User.channel_id == channelId).first()
         self.votes = None
 
     def youtube_auth(self, channelId):

@@ -18,7 +18,14 @@ CLIENT_SECRET_FILE = 'client_secret_bot.json'
 
 class YTBot:
     def __init__(self):
+        with open('db/db.json', encoding='UTF-8', mode='w') as f:
+            db_json = {'update': []}
+            json.dump(db_json, f)
+
         self.yt = self.youtube_auth()
+
+        db_session.global_init("db/jsbot.db")
+        self.db_sess = db_session.create_session()
 
         # Список всех стримеров, которые используют бота
         self.streamers = self._loadStreamersFromPickles()
@@ -57,10 +64,14 @@ class YTBot:
         for upd in db_json['update']:
             if upd['type'] == 'add_streamer':
                 channelId = upd['channelId']
-                streamer = Streamer(channelId)
+                streamer = Streamer(channelId, self.db_sess)
                 self.streamers.append(streamer)
                 self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
                 self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+
+        with open('db/db.json', encoding='UTF-8', mode='w') as f:
+            db_json = {'update': []}
+            json.dump(db_json, f)
 
     def parseCustomCmd(self, msg, streamer):
         command, *args = msg.message.lstrip('!').split()
@@ -91,12 +102,12 @@ class YTBot:
             if nextPageToken is None:
                 request = self.yt.liveChatMessages().list(
                     liveChatId=liveChatId,
-                    part='snippet'
+                    part='snippet,authorDetails'
                 )
             else:
                 request = self.yt.liveChatMessages().list(
                     liveChatId=liveChatId,
-                    part='snippet',
+                    part='snippet,authorDetails',
                     pageToken=nextPageToken
                 )
             response = request.execute()
@@ -142,12 +153,9 @@ class YTBot:
         которые есть в системе, а после возвращает их список.
         Загрузка идёт из файлов pickle"""
 
-        with open('db/db.json', encoding='UTF-8') as f:
-            streamers_ids = json.load(f)
-
         streamers_sessions = []
-        for id in streamers_ids['streamers']:
-            streamers_sessions.append(Streamer(id))
+        for streamer in self.db_sess.query(User).all():
+            streamers_sessions.append(Streamer(streamer.channel_id, db_sess=self.db_sess))
         return streamers_sessions
 
     def unbanUser(self, liveChatBanId: str):
