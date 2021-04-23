@@ -1,6 +1,62 @@
 {% extends "base.html" %}
 
 {% block content %}
-<title>Pog</title>
-<h3 align='center'>Index.html</h3>
+<div class="bg-secondary">
+	<div class="index-text text-light">
+		<h4>Стримьте проще!</h4>
+		<div>JustStreamBot - это чат-бот для YouTube, который позволяет вам упростить модерирование вашей трансляции</div>
+	</div>
+	<div class="index-main-btns">
+		{% if not current_user.is_authenticated %}
+		<a role="button" class="btn bg-info" href="/authorize">Подключиться!</a>
+		{% endif %}
+		<a role="button" class="btn btn-outline-dark" href="#what_can_do">Что он умеет?</a>
+	</div>
+	<div id="carouselExampleFade" class="carousel slide carousel-fade index-carousel container" data-ride="carousel">
+	  <div class="carousel-inner">
+		<div class="carousel-item active">
+		  <img src="{{url_for('static', filename='img/1.jpg')}}" class="d-block w-100" alt="...">
+		</div>
+		<div class="carousel-item">
+		  <img src="{{url_for('static', filename='img/2.jpg')}}" class="d-block w-100" alt="...">
+		</div>
+		<div class="carousel-item">
+		  <img src="{{url_for('static', filename='img/3.jpg')}}" class="d-block w-100" alt="...">
+		</div>
+	  </div>
+	</div>
+</div>
+<div class="bg-light">
+	<a name="what_can_do"></a>
+	<table class="card-table">
+	<tbody>
+		<tr>
+			<td>
+			<div class="card card-card" style="width: 18rem;">
+			  <img src="{{url_for('static', filename='img/profanity.png')}}" class="card-img-top card-img" alt="...">
+				  <div class="card-body">
+					<p class="card-text"><h3 style="text-align: center;">Система наказаний</h3><p style="text-align: center;">3 уровня наказания: Предупреждение, Мут и Бан</p></p>
+				  </div>
+			</div>
+			</td>
+			<td>
+			<div class="card card-card" style="width: 18rem;">
+			  <img src="{{url_for('static', filename='img/settings.png')}}" class="card-img-top card-img" alt="...">
+				  <div class="card-body">
+					<p class="card-text"><h3 style="text-align: center;">Свои команды</h3><p style="text-align: center;">Бот поддерживает разработку своих кастомных команд, например "!points"</p></p>
+				  </div>
+			</div>
+			</td>
+			<td>
+			<div class="card card-card" style="width: 18rem;">
+			  <img src="{{url_for('static', filename='img/chat.png')}}" class="card-img-top card-img" alt="...">
+				  <div class="card-body">
+					<p class="card-text"><h3 style="text-align: center;">Голосования</h3><p style="text-align: center;">Проводите голосования среди своих зрителей в прямом эфире!</p></p>
+				  </div>
+			</div>
+			</td>
+		</tr>
+	</tbody>
+	</table>
+</div>
 {% endblock %}

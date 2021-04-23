@@ -19,7 +19,7 @@ class Streamer():
 
         self.channelId = channelId
         # !!!Заменить upcoming на active
-        self.liveChatId, self.liveBroadcastId = self._liveStreamId(_type='upcoming')
+        self.liveChatId, self.liveBroadcastId = None, None
         self.userObj = db_sess.query(User).filter(User.channel_id == channelId).first()
         self.votes = None
 
@@ -40,7 +40,7 @@ class Streamer():
     def __repr__(self):
         return f'https://www.youtube.com/channel/{self.channelId}'
 
-    def _liveStreamId(self, _type='active'):
+    def getLiveStreamIds(self, _type='active'):
         request = self.yt.liveBroadcasts().list(
             part="snippet",
             broadcastStatus=_type
@@ -48,7 +48,10 @@ class Streamer():
 
         try:
             response = request.execute()
-            print(response['items'][-1]['snippet']['title'])
-            return response['items'][-1]['snippet']['liveChatId'], response['items'][-1]['id']
+            print('connected to:', response['items'][-1]['snippet']['title'])
+            self.liveChatId = response['items'][-1]['snippet']['liveChatId']
+            self.liveBroadcastId = response['items'][-1]['id']
         except Exception as e:
+            self.liveChatId = None
+            self.liveBroadcastId = None
             print(f'Error from Streamer.liveStreamId(): {e.__class__.__name__} {e}')

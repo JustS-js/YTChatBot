@@ -33,8 +33,9 @@ class YTBot:
         # Используется для асинхронного извлечения информации из чатов
         self.chats, self.broadcast_to_streamer = dict(), dict()
         for streamer in self.streamers:
-            self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-            self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+            if streamer.liveBroadcastId is not None:
+                self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
 
     def youtube_auth(self):
         """Полноценная авторизация бота и консервирование его данных"""
@@ -65,9 +66,24 @@ class YTBot:
             if upd['type'] == 'add_streamer':
                 channelId = upd['channelId']
                 streamer = Streamer(channelId, self.db_sess)
+                streamer.getLiveStreamIds()
                 self.streamers.append(streamer)
-                self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-                self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                if streamer.liveBroadcastId is not None:
+                    self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                    self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+            elif upd['type'] == 'fetch_stream':
+                channelId = upd['channelId']
+                liveBroadcastId = upd['liveBroadcastId']
+                for streamer in self.streamers:
+                    if streamer.channelId == channelId:
+                        break
+                streamer.getLiveStreamIds(_type='upcoming')
+                if liveBroadcastId != streamer.liveBroadcastId:
+                    streamer.liveChatId = None
+                    streamer.liveBroadcastId = None
+                else:
+                    self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                    self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
 
         with open('db/db.json', encoding='UTF-8', mode='w') as f:
             db_json = {'update': []}
@@ -155,7 +171,9 @@ class YTBot:
 
         streamers_sessions = []
         for streamer in self.db_sess.query(User).all():
-            streamers_sessions.append(Streamer(streamer.channel_id, db_sess=self.db_sess))
+            obj = Streamer(streamer.channel_id, db_sess=self.db_sess)
+            obj.getLiveStreamIds()
+            streamers_sessions.append(obj)
         return streamers_sessions
 
     def unbanUser(self, liveChatBanId: str):

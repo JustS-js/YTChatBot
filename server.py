@@ -3,7 +3,6 @@ from data import db_session
 from data.users import User
 from data.settings import Settings
 from os.path import isfile
-# from forms.user import NewJobForm
 from flask_login import LoginManager, login_user, current_user, login_required, logout_user
 
 import pickle
@@ -13,15 +12,15 @@ import google.oauth2.credentials
 import json
 import requests
 import feedparser
-from flask_ngrok import run_with_ngrok
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'admin_secret'
-run_with_ngrok(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 CLIENT_SECRET_FILE = 'client_secret_web.json'
+SCOPE = ['https://www.googleapis.com/auth/youtube.readonly',
+         'https://www.googleapis.com/auth/youtube.force-ssl']
 
 
 def create_db_from_scratch():
@@ -53,11 +52,12 @@ def create_db_from_scratch():
     )
 
 
-def make_user(name, channel_id):
+def make_user(name, channel_id, icon=None):
     db_sess = db_session.create_session()
     user = User(
         name=name,
-        channel_id=channel_id
+        channel_id=channel_id,
+        icon=icon
     )
     with open('db/db.json', 'r') as f:
         data = json.load(f)
@@ -69,15 +69,16 @@ def make_user(name, channel_id):
         json.dump(data, f)
     db_sess.add(user)
     db_sess.commit()
+    return user
 
 
-def make_settings(banwords, tempban_len, is_activated, streamer_id):
+def make_settings(banwords, tempban_len, is_activated, streamer_id, point_name='points'):
     db_sess = db_session.create_session()
     settings = Settings(
         banwords=';'.join(banwords),
         tempban_len=tempban_len,
         is_activated=is_activated,
-        point_name='points',
+        point_name=point_name,
         streamer_id=streamer_id
     )
     db_sess.add(settings)
@@ -101,7 +102,6 @@ def subscribe_youtube_channel(channel_id):
         data = {
             'hub.mode': 'subscribe',
             'hub.callback': url_for('subscribe_callback', _external=True),
-            'hub.lease_seconds': 864000,
             'hub.topic': topic_url
         }
         requests.post(subscribe_url, data=data)
@@ -114,17 +114,20 @@ def subscribe_callback():
     challenge = request.args.get('hub.challenge')
 
     if challenge:
-        print('challenge:', challenge)
         return challenge
 
     xml = request.data
     feed = feedparser.parse(xml)
     for e in feed.entries:
-
-        text = (f'channel: {e.yt_channelid}\n'
-                f'video_url: {e.link}\n'
-                f'title: {e.title}')
-        print(text)
+        with open('db/db.json', 'r') as f:
+            data = json.load(f)
+        with open('db/db.json', 'w') as f:
+            data['update'].append({
+                'type': 'fetch_stream',
+                'channelId': e.yt_channelid,
+                'liveBroadcastId': e.link.replace('https://www.youtube.com/watch?v=', '')
+            })
+            json.dump(data, f)
 
     return '', 204
 
@@ -132,7 +135,6 @@ def subscribe_callback():
 @app.route('/')
 @app.route('/index')
 def index():
-    print(url_for('subscribe_callback', _external=True))
     return render_template('index.html', db_sess=db_session.create_session(), User=User, title='JustStreamBot')
 
 
@@ -140,7 +142,7 @@ def index():
 def authorize():
     print('Вошёл в authorize')
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        CLIENT_SECRET_FILE, scopes=['https://www.googleapis.com/auth/youtube.readonly'])
+        CLIENT_SECRET_FILE, scopes=SCOPE)
     flow.redirect_uri = url_for('oauth2callback', _external=True)
     authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
     session['state'] = state
@@ -155,8 +157,7 @@ def oauth2callback():
     state = session['state']
 
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        CLIENT_SECRET_FILE, scopes=['https://www.googleapis.com/auth/youtube.readonly',
-                                    'https://www.googleapis.com/auth/youtube.force-ssl'], state=state)
+        CLIENT_SECRET_FILE, scopes=SCOPE, state=state)
     flow.redirect_uri = url_for('oauth2callback', _external=True)
 
     authorization_response = request.url.replace('http', 'https')
@@ -180,31 +181,20 @@ def oauth2callback():
         print('Такой уже есть')
         return redirect('/login')
     # Добавляем в БД =============
-    user = User(
+    subscribe_youtube_channel(channel_id)
+    user = make_user(
         name=title,
         channel_id=channel_id,
         icon=icon
     )
-    with open('db/db.json', 'r') as f:
-        data = json.load(f)
-    with open('db/db.json', 'w') as f:
-        data['update'].append({
-            'type': 'add_streamer',
-            'channelId': channel_id
-        })
-        json.dump(data, f)
-    db_sess.add(user)
-    db_sess.commit()
 
-    settings = Settings(
+    make_settings(
         banwords='',
         tempban_len=300,
         is_activated=False,
         point_name='points',
         streamer_id=user.id
     )
-    db_sess.add(settings)
-    db_sess.commit()
     print('Вышел из oauth2callback')
     return redirect('/login')
 

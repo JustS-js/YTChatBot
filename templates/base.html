@@ -15,8 +15,8 @@
 </head>
 <body>
 	<header>
-		<nav class="navbar navbar-light bg-light">
-			<a class="navbar-brand" href="#"><h1>Just Stream Bot</h1></a>
+		<nav class="navbar navbar-light bg-dark">
+			<a class="navbar-brand" href="#"><h1 class="text-light">Just Stream Bot</h1></a>
 			{% if current_user.is_authenticated %}
 			<form class="form-inline">
 				<div class="ml-auto pr-2 nav-item dropdown">
@@ -29,11 +29,11 @@
 						<a class="dropdown-item btn-warning" href="/logout">Выйти</a>
 					</div>
 				</div>
-				<div class="container my-2 my-sm-0"><img src="{{current_user.icon}}" class=""></div>
+				<div class="my-2 my-sm-0"><img src="{{current_user.icon}}" class="icon"></div>
 			</form>
 			{% else %}
 			<span class="navbar-text ml-auto pr-2">
-				<a href="/authorize" class="btn btn-warning">
+				<a href="/authorize" class="btn bg-light">
 					Войти
 				</a>
 			</span>
@@ -41,7 +41,7 @@
 		</nav>
 	</header>
 <!-- Begin page content -->
-	<main role="main" class="container">
+	<main role="main" class="">
 		{% block content %}{% endblock %}
 	</main>
 </body>
