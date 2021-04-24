@@ -33,7 +33,7 @@ class YTBot:
         # Используется для асинхронного извлечения информации из чатов
         self.chats, self.broadcast_to_streamer = dict(), dict()
         for streamer in self.streamers:
-            if streamer.liveBroadcastId is not None:
+            if streamer.liveBroadcastId is not None and streamer.userObj.settings[0].is_activated:
                 self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
                 self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
 
@@ -77,13 +77,29 @@ class YTBot:
                 for streamer in self.streamers:
                     if streamer.channelId == channelId:
                         break
+                # !!! Заменить
                 streamer.getLiveStreamIds(_type='upcoming')
-                if liveBroadcastId != streamer.liveBroadcastId:
+                if liveBroadcastId != streamer.liveBroadcastId or not streamer.userObj.settings[0].is_activated:
                     streamer.liveChatId = None
                     streamer.liveBroadcastId = None
                 else:
                     self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
                     self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+            elif upd['type'] == 'settings':
+                channelId = upd['channelId']
+                for streamer in self.streamers:
+                    if streamer.channelId == channelId:
+                        break
+                streamer.getLiveStreamIds(_type='upcoming')
+                if streamer.userObj.settings[0].is_activated:
+                    if streamer.liveBroadcastId is not None:
+                        self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                        self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                else:
+                    if streamer.liveBroadcastId is not None:
+                        print('disconected from:', streamer.liveBroadcastId)
+                        self.chats.pop(streamer.liveBroadcastId, None)
+                        self.broadcast_to_streamer.pop(streamer.liveBroadcastId, None)
 
         with open('db/db.json', encoding='UTF-8', mode='w') as f:
             db_json = {'update': []}
@@ -172,7 +188,7 @@ class YTBot:
         streamers_sessions = []
         for streamer in self.db_sess.query(User).all():
             obj = Streamer(streamer.channel_id, db_sess=self.db_sess)
-            obj.getLiveStreamIds()
+            obj.getLiveStreamIds('upcoming')
             streamers_sessions.append(obj)
         return streamers_sessions
 

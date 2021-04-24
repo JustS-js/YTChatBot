@@ -28,35 +28,25 @@
 </div>
 <div class="bg-light">
 	<a name="what_can_do"></a>
-	<table class="card-table">
-	<tbody>
-		<tr>
-			<td>
-			<div class="card card-card" style="width: 18rem;">
-			  <img src="{{url_for('static', filename='img/profanity.png')}}" class="card-img-top card-img" alt="...">
-				  <div class="card-body">
-					<p class="card-text"><h3 style="text-align: center;">Система наказаний</h3><p style="text-align: center;">3 уровня наказания: Предупреждение, Мут и Бан</p></p>
-				  </div>
+	<div class="card-deck container card-table">
+		<div class="card card-card">
+			<img src="{{url_for('static', filename='img/profanity.png')}}" class="card-img-top card-img" alt="...">
+			<div class="card-body">
+				<p class="card-text"><h3 style="text-align: center;">Система наказаний</h3><p style="text-align: center;">3 уровня наказания: Предупреждение, Мут и Бан</p></p>
 			</div>
-			</td>
-			<td>
-			<div class="card card-card" style="width: 18rem;">
-			  <img src="{{url_for('static', filename='img/settings.png')}}" class="card-img-top card-img" alt="...">
-				  <div class="card-body">
-					<p class="card-text"><h3 style="text-align: center;">Свои команды</h3><p style="text-align: center;">Бот поддерживает разработку своих кастомных команд, например "!points"</p></p>
-				  </div>
+		</div>
+		<div class="card card-card bg-primary">
+			<img src="{{url_for('static', filename='img/settings.png')}}" class="card-img-top card-img" alt="...">
+			<div class="card-body">
+				<p class="card-text"><h3 style="text-align: center;" class="text-light">Свои команды</h3><p style="text-align: center;" class="text-light">Бот поддерживает разработку своих кастомных команд, например "!points"</p></p>
 			</div>
-			</td>
-			<td>
-			<div class="card card-card" style="width: 18rem;">
-			  <img src="{{url_for('static', filename='img/chat.png')}}" class="card-img-top card-img" alt="...">
-				  <div class="card-body">
-					<p class="card-text"><h3 style="text-align: center;">Голосования</h3><p style="text-align: center;">Проводите голосования среди своих зрителей в прямом эфире!</p></p>
-				  </div>
+		</div>
+		<div class="card card-card">
+			<img src="{{url_for('static', filename='img/chat.png')}}" class="card-img-top card-img" alt="...">
+			<div class="card-body">
+				<p class="card-text"><h3 style="text-align: center;">Голосования</h3><p style="text-align: center;">Проводите голосования среди своих зрителей в прямом эфире!</p></p>
 			</div>
-			</td>
-		</tr>
-	</tbody>
-	</table>
+		</div>
+	</div>
 </div>
 {% endblock %}

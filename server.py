@@ -12,6 +12,7 @@ import google.oauth2.credentials
 import json
 import requests
 import feedparser
+from forms.settings import SettingsForm
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'admin_secret'
@@ -135,7 +136,38 @@ def subscribe_callback():
 @app.route('/')
 @app.route('/index')
 def index():
-    return render_template('index.html', db_sess=db_session.create_session(), User=User, title='JustStreamBot')
+    return render_template('index.html', User=User, title='JustStreamBot | Home')
+
+
+@login_required
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    form = SettingsForm()
+    if request.method == "GET":
+        db_sess = db_session.create_session()
+        settings = db_sess.query(Settings).filter(Settings.id == current_user.settings[0].id).first()
+        form.point_name.data = settings.point_name
+        form.tempban_len.data = settings.tempban_len
+        form.banwords.data = settings.banwords
+        form.is_activated.data = settings.is_activated
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        settings = db_sess.query(Settings).filter(Settings.id == current_user.settings[0].id).first()
+        settings.point_name = form.point_name.data
+        settings.tempban_len = form.tempban_len.data
+        settings.banwords = form.banwords.data
+        settings.is_activated = form.is_activated.data
+        db_sess.commit()
+        print(current_user)
+        with open('db/db.json', 'r') as f:
+            data = json.load(f)
+        with open('db/db.json', 'w') as f:
+            data['update'].append({
+                'type': 'settings',
+                'channelId': current_user.channel_id
+            })
+            json.dump(data, f)
+    return render_template('settings.html', title='JustStreamBot | Settings', form=form)
 
 
 @app.route('/authorize')

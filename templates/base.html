@@ -16,7 +16,10 @@
 <body>
 	<header>
 		<nav class="navbar navbar-light bg-dark">
-			<a class="navbar-brand" href="#"><h1 class="text-light">Just Stream Bot</h1></a>
+			<a href="/#" class="navbar-brand vertical">
+				<img src="{{url_for('static', filename='img/bot icon.png')}}" class="bot-icon" alt="">
+				<h1 class="text-light d-inline-block">Just Stream Bot</h1>
+			</a>
 			{% if current_user.is_authenticated %}
 			<form class="form-inline">
 				<div class="ml-auto pr-2 nav-item dropdown">
@@ -24,7 +27,7 @@
 						{{current_user.name}}
 					</a>
 					<div class="dropdown-menu pr-auto" aria-labelledby="navbarDropdownMenuLink">
-						<a class="dropdown-item btn-info" href="/index">Настройки</a>
+						<a class="dropdown-item btn-info" href="/settings">Настройки</a>
 						<div class="dropdown-divider"></div>
 						<a class="dropdown-item btn-warning" href="/logout">Выйти</a>
 					</div>

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center" class="container">
+	<span class="sets">
+		<form action="" method="post" class="login_form bg-info">
+			{{ form.hidden_tag() }}
+			<p>
+				{{ form.point_name.label }}<br>
+				{{ form.point_name(class="form-control") }}<br>
+				{% for error in form.point_name.errors %}
+					<div class="alert alert-danger" role="alert">
+						{{ error }}
+					</div>
+				{% endfor %}
+			</p>
+			<p>
+				{{ form.tempban_len.label }}<br>
+				{{ form.tempban_len(class="form-control") }}<br>
+				{% for error in form.tempban_len.errors %}
+					<div class="alert alert-danger" role="alert">
+						{{ error }}
+					</div>
+				{% endfor %}
+			</p>
+			<p>
+				{{ form.banwords.label }}<br>
+				{{ form.banwords(class="form-control") }}<br>
+				{% for error in form.banwords.errors %}
+					<div class="alert alert-danger" role="alert">
+						{{ error }}
+					</div>
+				{% endfor %}
+			</p>
+			<p>{{ form.is_activated() }} {{ form.is_activated.label }}</p>
+			<p>{{ form.submit(type="submit", class="btn btn-light") }}</p>
+			<div>{{ message }}</div>
+		</form>
+	</span>
+	<span class="sets card viewers">
+		<span class="card-body">
+			<h5 class="card-title">Ваши зрители</h5>
+			<p class="card-text">
+				<table>
+				<tr><th>Никнейм</th><th>Очки</th><th>Наказание</th></tr>
+				{% for viewer in current_user.viewers %}
+				<tr><td>{{viewer.name}}</td><td>{{viewer.points}}</td><td>{{viewer.bantype}}</td></tr>
+				{% endfor %}
+				</table>
+			</p>
+		</span>
+	</span>
+</div>
+
+{% endblock %}

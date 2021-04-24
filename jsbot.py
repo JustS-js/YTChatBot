@@ -27,7 +27,6 @@ class JSBot(core.YTBot):
             if chat_obj.message[0] == '!' and chat_obj.message[1:] not in USED_CMD:
                 self.parseCustomCmd(chat_obj, streamer)
             # Банворды =======================================
-            streamer.userObj.settings[0].banwords = 'aboba'
             if set(chat_obj.message.lower().split()) & set(streamer.userObj.settings[0].banwords.split(';')):
                 # bantype: 0 - no ban; 1 - warning; 2 - tempban; 3 (0) - ban
                 print(set(chat_obj.message.lower().split()))

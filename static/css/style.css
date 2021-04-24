@@ -1,3 +1,43 @@
+.bot-icon{
+	height: auto; 
+    width: auto; 
+    max-width: 60px; 
+    max-height: 60px;
+}
+
+form.login_form {
+	margin-top: 25px;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 450px;
+    border: 1px solid gray;
+    border-radius: 5px;
+    padding: 10px;
+	text-align:center;
+}
+
+.sets{
+    display: inline-block;
+	padding: 5px;
+	vertical-align: middle;
+}
+
+.viewers{
+	height:600px;
+	margin-top:25px
+}
+
+.banwords{
+	width: auto;
+	height: 200px;
+	resize: none
+}
+
+.vertical {
+    align-items: center;
+    display: flex;
+}
+
 /* Resize images */
 .icon {
     height: auto; 
@@ -20,12 +60,14 @@
 .card-table{
 	margin-left: auto;
 	margin-right: auto;
-	padding-top: 100px;
+	padding-top: 25px;
+	padding-bottom: 25px;
 }
 
 .card-card{
 	width: 100px;
 	height: 350px;
+
 }
 
 .index-carousel{

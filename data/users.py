@@ -16,4 +16,4 @@ class User(SqlAlchemyBase, UserMixin):
     viewers = orm.relation("Viewer", back_populates='streamer')
 
     def __repr__(self):
-        return f'{self.surname} {self.name}'
+        return f'{self.name} {self.channel_id}'
