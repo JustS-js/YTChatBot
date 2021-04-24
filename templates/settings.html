@@ -43,7 +43,7 @@
 			<p class="card-text">
 				<table>
 				<tr><th>Никнейм</th><th>Очки</th><th>Наказание</th></tr>
-				{% for viewer in current_user.viewers %}
+				{% for viewer in viewers %}
 				<tr><td>{{viewer.name}}</td><td>{{viewer.points}}</td><td>{{viewer.bantype}}</td></tr>
 				{% endfor %}
 				</table>

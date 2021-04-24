@@ -167,7 +167,8 @@ def settings():
                 'channelId': current_user.channel_id
             })
             json.dump(data, f)
-    return render_template('settings.html', title='JustStreamBot | Settings', form=form)
+    viewers = db_sess.query(User).filter(User.id == current_user.id).first().viewers
+    return render_template('settings.html', title='JustStreamBot | Settings', form=form, viewers=viewers)
 
 
 @app.route('/authorize')
