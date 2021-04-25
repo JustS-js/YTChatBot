@@ -13,20 +13,22 @@ import json
 import requests
 import feedparser
 from forms.settings import SettingsForm
+from waitress import serve
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'admin_secret'
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-CLIENT_SECRET_FILE = 'client_secret_web.json'
+CLIENT_SECRET_FILE = '/root/JSBotServer/client_secret_web.json'
 SCOPE = ['https://www.googleapis.com/auth/youtube.readonly',
          'https://www.googleapis.com/auth/youtube.force-ssl']
+DB = "/root/JSBotServer/db/jsbot.db"
 
 
 def create_db_from_scratch():
-    db_session.global_init("db/jsbot.db")
-    if isfile('db/jsbot.db'):
+    db_session.global_init(DB)
+    if isfile(DB):
         return
     make_user(
         'Just_S',
@@ -60,9 +62,9 @@ def make_user(name, channel_id, icon=None):
         channel_id=channel_id,
         icon=icon
     )
-    with open('db/db.json', 'r') as f:
+    with open('/root/JSBotServer/db/db.json', 'r') as f:
         data = json.load(f)
-    with open('db/db.json', 'w') as f:
+    with open('/root/JSBotServer/db/db.json', 'w') as f:
         data['update'].append({
             'type': 'add_streamer',
             'channelId': channel_id
@@ -120,9 +122,9 @@ def subscribe_callback():
     xml = request.data
     feed = feedparser.parse(xml)
     for e in feed.entries:
-        with open('db/db.json', 'r') as f:
+        with open('/root/JSBotServer/db/db.json', 'r') as f:
             data = json.load(f)
-        with open('db/db.json', 'w') as f:
+        with open('/root/JSBotServer/db/db.json', 'w') as f:
             data['update'].append({
                 'type': 'fetch_stream',
                 'channelId': e.yt_channelid,
@@ -159,9 +161,9 @@ def settings():
         settings.is_activated = form.is_activated.data
         db_sess.commit()
         print(current_user)
-        with open('db/db.json', 'r') as f:
+        with open('/root/JSBotServer/db/db.json', 'r') as f:
             data = json.load(f)
-        with open('db/db.json', 'w') as f:
+        with open('/root/JSBotServer/db/db.json', 'w') as f:
             data['update'].append({
                 'type': 'settings',
                 'channelId': current_user.channel_id
@@ -176,7 +178,7 @@ def authorize():
     print('Вошёл в authorize')
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         CLIENT_SECRET_FILE, scopes=SCOPE)
-    flow.redirect_uri = url_for('oauth2callback', _external=True)
+    flow.redirect_uri = url_for('oauth2callback', _external=True).replace('http', 'https')
     authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
     session['state'] = state
     print('Вышел из authorize')
@@ -191,7 +193,7 @@ def oauth2callback():
 
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         CLIENT_SECRET_FILE, scopes=SCOPE, state=state)
-    flow.redirect_uri = url_for('oauth2callback', _external=True)
+    flow.redirect_uri = url_for('oauth2callback', _external=True).replace('http', 'https')
 
     authorization_response = request.url.replace('http', 'https')
     flow.fetch_token(authorization_response=authorization_response)
@@ -206,7 +208,7 @@ def oauth2callback():
     title = channel['items'][0]['snippet']['title']
     icon = channel['items'][0]['snippet']['thumbnails']['default']['url']
     # Консервируем ===============
-    with open(f'creds/{channel_id}.pickle', "wb") as f:
+    with open(f'/root/JSBotServer/creds/{channel_id}.pickle', "wb") as f:
         pickle.dump(credentials, f)
     # Проверяем наличие в БД =====
     db_sess = db_session.create_session()
@@ -215,12 +217,12 @@ def oauth2callback():
         return redirect('/login')
     # Добавляем в БД =============
     subscribe_youtube_channel(channel_id)
-    user = make_user(
+    make_user(
         name=title,
         channel_id=channel_id,
         icon=icon
     )
-
+    user = db_sess.query(User).filter(User.channel_id == channel_id).first()
     make_settings(
         banwords='',
         tempban_len=300,
@@ -269,7 +271,8 @@ def logout():
 
 def main():
     create_db_from_scratch()
-    app.run()
+    serve(app, host='0.0.0.0', port='5000')
+    # app.run()
 
 
 if __name__ == '__main__':

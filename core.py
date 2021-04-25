@@ -13,18 +13,19 @@ from data.users import User
 from data.settings import Settings
 from data.viewers import Viewer
 
-CLIENT_SECRET_FILE = 'client_secret_bot.json'
+CLIENT_SECRET_FILE = '/root/JSBotServer/client_secret_bot.json'
+DB = "/root/JSBotServer/db/jsbot.db"
 
 
 class YTBot:
     def __init__(self):
-        with open('db/db.json', encoding='UTF-8', mode='w') as f:
+        with open('/root/JSBotServer/db/db.json', encoding='UTF-8', mode='w') as f:
             db_json = {'update': []}
             json.dump(db_json, f)
 
         self.yt = self.youtube_auth()
 
-        db_session.global_init("db/jsbot.db")
+        db_session.global_init(DB)
         self.db_sess = db_session.create_session()
 
         # Список всех стримеров, которые используют бота
@@ -34,14 +35,17 @@ class YTBot:
         self.chats, self.broadcast_to_streamer = dict(), dict()
         for streamer in self.streamers:
             if streamer.liveBroadcastId is not None and streamer.userObj.settings[0].is_activated:
-                self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-                self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                try:
+                    self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                    self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                except pytchat.exceptions.InvalidVideoIdException:
+                    print('Error while connecting to chat:', streamer.liveBroadcastId)
 
     def youtube_auth(self):
         """Полноценная авторизация бота и консервирование его данных"""
         creds = None
-        if os.path.isfile('creds/core/ytbot_build.pickle'):
-            with open('creds/core/ytbot_build.pickle', 'rb') as f:
+        if os.path.isfile('/root/JSBotServer/creds/core/ytbot_build.pickle'):
+            with open('/root/JSBotServer/creds/core/ytbot_build.pickle', 'rb') as f:
                 creds = pickle.load(f)
 
         if not creds or not creds.valid:
@@ -52,14 +56,14 @@ class YTBot:
                 flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, scope)
                 creds = flow.run_console()
             # Консервируем данные на потом
-            with open('creds/core/ytbot_build.pickle', 'wb') as f:
+            with open('/root/JSBotServer/creds/core/ytbot_build.pickle', 'wb') as f:
                 pickle.dump(creds, f)
 
         return build('youtube', 'v3', credentials=creds)
 
     def checkDB(self):
         # DB update check
-        with open('db/db.json', encoding='UTF-8') as f:
+        with open('/root/JSBotServer/db/db.json', encoding='UTF-8') as f:
             db_json = json.load(f)
 
         for upd in db_json['update']:
@@ -69,8 +73,11 @@ class YTBot:
                 streamer.getLiveStreamIds()
                 self.streamers.append(streamer)
                 if streamer.liveBroadcastId is not None:
-                    self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-                    self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                    try:
+                        self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                        self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                    except pytchat.exceptions.InvalidVideoIdException:
+                        print('Error while connecting to chat:', streamer.liveBroadcastId)
             elif upd['type'] == 'fetch_stream':
                 channelId = upd['channelId']
                 liveBroadcastId = upd['liveBroadcastId']
@@ -83,8 +90,11 @@ class YTBot:
                     streamer.liveChatId = None
                     streamer.liveBroadcastId = None
                 else:
-                    self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-                    self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                    try:
+                        self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                        self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                    except pytchat.exceptions.InvalidVideoIdException:
+                        print('Error while connecting to chat:', streamer.liveBroadcastId)
             elif upd['type'] == 'settings':
                 channelId = upd['channelId']
                 for streamer in self.streamers:
@@ -93,15 +103,18 @@ class YTBot:
                 streamer.getLiveStreamIds(_type='upcoming')
                 if streamer.userObj.settings[0].is_activated:
                     if streamer.liveBroadcastId is not None:
-                        self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
-                        self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                        try:
+                            self.chats[streamer.liveBroadcastId] = pytchat.create(video_id=streamer.liveBroadcastId)
+                            self.broadcast_to_streamer[streamer.liveBroadcastId] = streamer
+                        except pytchat.exceptions.InvalidVideoIdException:
+                            print('Error while connecting to chat:', streamer.liveBroadcastId)
                 else:
                     if streamer.liveBroadcastId is not None:
                         print('disconected from:', streamer.liveBroadcastId)
                         self.chats.pop(streamer.liveBroadcastId, None)
                         self.broadcast_to_streamer.pop(streamer.liveBroadcastId, None)
 
-        with open('db/db.json', encoding='UTF-8', mode='w') as f:
+        with open('/root/JSBotServer/db/db.json', encoding='UTF-8', mode='w') as f:
             db_json = {'update': []}
             json.dump(db_json, f)
 
@@ -145,6 +158,7 @@ class YTBot:
             response = request.execute()
             return response
         except Exception as e:
+            self.yt = self.youtube_auth()
             print(f'Error from YTBot.listMessages(): {e.__class__.__name__} {e}')
 
     def deleteMessage(self, id: str):
@@ -156,6 +170,7 @@ class YTBot:
             response = request.execute()
             return response
         except Exception as e:
+            self.yt = self.youtube_auth()
             print(f'Error from YTBot.deleteMessage(): {e.__class__.__name__} {e}')
 
     def sendMessage(self, text: str, liveChatId: str):
@@ -178,6 +193,7 @@ class YTBot:
             response = request.execute()
             return response
         except Exception as e:
+            self.yt = self.youtube_auth()
             print(f'Error from YTBot.sendMessage(): {e.__class__.__name__} {e}')
 
     def _loadStreamersFromPickles(self):
@@ -204,6 +220,7 @@ class YTBot:
             )
             request.execute()  # разбан не возвращает объектов
         except Exception as e:
+            self.yt = self.youtube_auth()
             print(f'Error from YTBot.unbanUser(): {e.__class__.__name__} {e}')
 
     def banUser(self, liveChatId: str, userToBanId: str, duration=300, temp=False):
@@ -237,9 +254,11 @@ class YTBot:
 
             liveChatBan_id = response['id']
             # !!!
+            # Пока эта идея заброшена. Возможны доработки в будущем
             # sql work, save ban id to delete it later
             # key: userToBan; values: liveChatBan_id
             # !!!
             return response
         except Exception as e:
+            self.yt = self.youtube_auth()
             print(f'Error from YTBot.banUser(): {e.__class__.__name__} {e}')

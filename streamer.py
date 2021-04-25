@@ -8,7 +8,7 @@ from data.users import User
 from data.settings import Settings
 from data.viewers import Viewer
 
-CLIENT_SECRET_FILE = 'client_secret_web.json'
+CLIENT_SECRET_FILE = '/root/JSBotServer/client_secret_web.json'
 
 
 class Streamer():
@@ -26,13 +26,13 @@ class Streamer():
     def youtube_auth(self, channelId):
         """Полноценная авторизация пользователя и консервирование его данных"""
         creds = None
-        if os.path.isfile(f'creds/{channelId}.pickle'):
-            with open(f'creds/{channelId}.pickle', 'rb') as f:
+        if os.path.isfile(f'/root/JSBotServer/creds/{channelId}.pickle'):
+            with open(f'/root/JSBotServer/creds/{channelId}.pickle', 'rb') as f:
                 creds = pickle.load(f)
 
         if creds.expired and creds.refresh_token:
             creds.refresh(Request())
-            with open(f'creds/{channelId}.pickle', "wb") as f:
+            with open(f'/root/JSBotServer/creds/{channelId}.pickle', "wb") as f:
                 pickle.dump(creds, f)
 
         return build('youtube', 'v3', credentials=creds)
@@ -52,6 +52,7 @@ class Streamer():
             self.liveChatId = response['items'][-1]['snippet']['liveChatId']
             self.liveBroadcastId = response['items'][-1]['id']
         except Exception as e:
+            self.yt = self.youtube_auth(self.channelId)
             self.liveChatId = None
             self.liveBroadcastId = None
             print(f'Error from Streamer.liveStreamId(): {e.__class__.__name__} {e}')

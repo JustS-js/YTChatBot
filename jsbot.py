@@ -27,6 +27,7 @@ class JSBot(core.YTBot):
             if chat_obj.message[0] == '!' and chat_obj.message[1:] not in USED_CMD:
                 self.parseCustomCmd(chat_obj, streamer)
             # Банворды =======================================
+            print(streamer.userObj.settings[0].banwords.split(';'))
             if set(chat_obj.message.lower().split()) & set(streamer.userObj.settings[0].banwords.split(';')):
                 # bantype: 0 - no ban; 1 - warning; 2 - tempban; 3 (0) - ban
                 print(set(chat_obj.message.lower().split()))
@@ -81,6 +82,10 @@ class JSBot(core.YTBot):
             self.sendMessage(text=f'@{msg.author.name}, сначала завершите предыдущее голосование (!voteend)',
                              liveChatId=streamer.liveChatId)
             return
+        if len(args[0]) < 2:
+            self.sendMessage(text=f'@{msg.author.name}, нужно минимум 2 варианта!',
+                             liveChatId=streamer.liveChatId)
+            return
 
         try:
             streamer.votes = {
@@ -93,8 +98,8 @@ class JSBot(core.YTBot):
                              liveChatId=streamer.liveChatId)
         except Exception as e:
             print(e, e.__class__.__name__)
-            # self.sendMessage(text=f'@{msg.author.name}, используйте только числа (1, 2, 3...)',
-            #                  liveChatId=streamer.liveChatId)
+            self.sendMessage(text=f'@{msg.author.name}, используйте только числа (1, 2, 3...)',
+                             liveChatId=streamer.liveChatId)
 
     def vote(self, streamer, msg, *args):
         """Custom command"""
